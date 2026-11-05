@@ -26,7 +26,7 @@ Projeto acadêmico do Projeto Integrador Transdisciplinar II, baseado nas histó
 
 1. Instale Node.js 26 LTS ou superior.
 2. Abra o PowerShell nesta pasta do projeto.
-3. Execute `node server.js`.
+3. Execute `npm start` ou `node server.js`.
 4. Acesse `http://localhost:3000` no navegador.
 5. Para parar o servidor, volte ao PowerShell e pressione `Ctrl+C`.
 
