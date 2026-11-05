@@ -1,0 +1,6 @@
+data.json
+doce-nuvem.sqlite
+doce-nuvem.sqlite-shm
+doce-nuvem.sqlite-wal
+node_modules/
+.env
