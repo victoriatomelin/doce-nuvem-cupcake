@@ -16,7 +16,7 @@ Projeto acadêmico do Projeto Integrador Transdisciplinar II, baseado nas histó
 
 | Item | Escolha |
 |---|---|
-| Front-end | HTML, CSS e JavaScript |
+| Front-end | HTML, CSS e JavaScript; fonte Host Grotesk via Google Fonts |
 | Back-end | Node.js 26, módulo HTTP nativo |
 | Banco de dados | SQLite local (`doce-nuvem.sqlite`), criado e preenchido no primeiro uso |
 | Plataforma | Aplicação web executada localmente |

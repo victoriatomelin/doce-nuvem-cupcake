@@ -64,6 +64,7 @@ O desenvolvimento foi organizado em incrementos curtos a partir do backlog do PI
 |---|---|
 | Linguagem do back-end | JavaScript com Node.js 26 |
 | Banco de dados | SQLite (`doce-nuvem.sqlite`) |
+| Fonte da interface | Host Grotesk, carregada pelo Google Fonts |
 | Hospedagem | Execução local para demonstração (`localhost`) |
 | Plataforma | Aplicação web acessada pelo navegador |
 | Modo de codificação | Tradicional |
