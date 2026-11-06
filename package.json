@@ -2,7 +2,7 @@
   "name": "doce-nuvem-pit2",
   "version": "1.0.0",
   "private": true,
-  "description": "MVP acadêmico de loja de cupcakes com Node.js e SQLite",
+  "description": "Projeto integrador transdisciplinar II de loja de cupcakes com Node.js e SQLite",
   "scripts": {
     "start": "node server.js"
   },

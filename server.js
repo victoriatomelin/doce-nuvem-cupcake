@@ -7,16 +7,22 @@ const { Database } = require('node:sqlite');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
-const DB_FILE = path.join(ROOT, 'doce-nuvem.sqlite');
+// Railway exposes the persistent volume path at runtime. Locally, keep the
+// database beside the application files as before.
+const DB_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || ROOT;
+fs.mkdirSync(DB_DIR, { recursive: true });
+const DB_FILE = path.join(DB_DIR, 'doce-nuvem.sqlite');
 const initialProducts = [
-  { id: 1, name: 'Red Velvet', desc: 'Massa aveludada de cacau e cream cheese.', price: 12.9, cat: 'Tradicional', emoji: '', stock: 12 },
-  { id: 2, name: 'Choco Nuvem', desc: 'Chocolate intenso com brigadeiro cremoso.', price: 13.9, cat: 'Tradicional', emoji: '', stock: 9 },
-  { id: 3, name: 'Limonada Rosa', desc: 'Massa de limão siciliano e merengue.', price: 12.5, cat: 'Tradicional', emoji: '', stock: 8 },
-  { id: 4, name: 'Morango & Baunilha', desc: 'Baunilha de verdade e geleia artesanal.', price: 14.5, cat: 'Tradicional', emoji: '', stock: 6 },
-  { id: 5, name: 'Cacau Feliz', desc: '100% vegetal, com cacau e leite de aveia.', price: 14.9, cat: 'Vegano', emoji: '', stock: 5 },
-  { id: 6, name: 'Coco Tropical', desc: 'Massa leve de coco com cobertura cremosa.', price: 13.5, cat: 'Vegano', emoji: '', stock: 7 },
-  { id: 7, name: 'Amêndoa & Mel', desc: 'Sem glúten, com farinha de amêndoas.', price: 15.9, cat: 'Sem glúten', emoji: '', stock: 4 },
-  { id: 8, name: 'Doce de Leite', desc: 'Massa amanteigada e doce de leite artesanal.', price: 13.9, cat: 'Sem glúten', emoji: '', stock: 0 }
+  { id: 1, name: 'Red Velvet', desc: 'Massa aveludada de cacau e cream cheese.', price: 12.9, cat: 'Tradicional', emoji: '🧁', stock: 12 },
+  { id: 2, name: 'Choco Nuvem', desc: 'Chocolate intenso com brigadeiro cremoso.', price: 13.9, cat: 'Tradicional', emoji: '🍫', stock: 9 },
+  { id: 3, name: 'Limonada Rosa', desc: 'Massa de limão siciliano e merengue.', price: 12.5, cat: 'Tradicional', emoji: '🍋', stock: 8 },
+  { id: 4, name: 'Morango & Baunilha', desc: 'Baunilha de verdade e geleia artesanal.', price: 14.5, cat: 'Tradicional', emoji: '🍓', stock: 6 },
+  { id: 5, name: 'Cacau Feliz', desc: '100% vegetal, com cacau e leite de aveia.', price: 14.9, cat: 'Vegano', emoji: '🌱', stock: 5 },
+  { id: 6, name: 'Coco Tropical', desc: 'Massa leve de coco com cobertura cremosa.', price: 13.5, cat: 'Vegano', emoji: '🥥', stock: 7 },
+  { id: 7, name: 'Amêndoa & Mel', desc: 'Sem glúten, com farinha de amêndoas.', price: 15.9, cat: 'Sem glúten', emoji: '🍯', stock: 4 },
+  { id: 8, name: 'Doce de Leite', desc: 'Massa amanteigada com recheio e cobertura de doce de leite.', price: 13.9, cat: 'Sem glúten', emoji: '🍮', stock: 0 },
+  { id: 9, name: 'Baunilha com Frutas Vermelhas', desc: 'Massa de baunilha, recheio de frutas vermelhas e cobertura de cream cheese.', price: 15.5, cat: 'Tradicional', emoji: '🫐', stock: 6 },
+  { id: 10, name: 'Paçoca Cremosa', desc: 'Massa de amendoim, recheio de doce de leite e cobertura de paçoca. Contém amendoim e leite.', price: 14.9, cat: 'Tradicional', emoji: '🥜', stock: 6 }
 ];
 
 const db = new Database(DB_FILE);
@@ -50,9 +56,12 @@ db.exec(`
     subtotal REAL NOT NULL
   );
 `);
-if (db.prepare('SELECT COUNT(*) AS count FROM products').get().count === 0) {
-  const insert = db.prepare('INSERT INTO products (id, name, description, price, category, emoji, stock) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  for (const product of initialProducts) insert.run(product.id, product.name, product.desc, product.price, product.cat, product.emoji, product.stock);
+// Adiciona produtos ausentes sem reinicializar o estoque de quem já existe.
+const insertProduct = db.prepare('INSERT OR IGNORE INTO products (id, name, description, price, category, emoji, stock) VALUES (?, ?, ?, ?, ?, ?, ?)');
+const updateProductEmoji = db.prepare('UPDATE products SET emoji = ? WHERE id = ?');
+for (const product of initialProducts) {
+  insertProduct.run(product.id, product.name, product.desc, product.price, product.cat, product.emoji, product.stock);
+  updateProductEmoji.run(product.emoji, product.id);
 }
 
 function send(res, status, body, type = 'application/json; charset=utf-8') {
@@ -79,7 +88,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   try {
     if (req.method === 'GET' && url.pathname === '/api/products') {
-      const products = db.prepare('SELECT id, name, description AS "desc", price, category AS cat, stock FROM products ORDER BY id').all();
+      const products = db.prepare('SELECT id, name, description AS "desc", price, category AS cat, stock, emoji FROM products ORDER BY id').all();
       return send(res, 200, products);
     }
     if (req.method === 'GET' && url.pathname === '/api/orders') {
@@ -91,7 +100,7 @@ const server = http.createServer(async (req, res) => {
       const address = typeof body.address === 'string' ? body.address.trim() : '';
       const payment = typeof body.payment === 'string' ? body.payment.trim() : '';
       if (address.length < 6 || address.length > 180) return send(res, 400, { error: 'Informe um endereço válido (6 a 180 caracteres).' });
-      if (!['PIX (simulado)', 'Cartão de crédito (simulado)', 'Pagamento na entrega (simulado)'].includes(payment)) return send(res, 400, { error: 'Forma de pagamento inválida.' });
+      if (!['PIX', 'Cartão de Crédito', 'Pagamento na Entrega', 'PIX (simulado)', 'Cartão de crédito (simulado)', 'Pagamento na entrega (simulado)'].includes(payment)) return send(res, 400, { error: 'Forma de pagamento inválida.' });
       if (!Array.isArray(body.items) || body.items.length === 0) return send(res, 400, { error: 'O pedido precisa ter ao menos um produto.' });
 
       // Soma itens repetidos antes da checagem de estoque.
